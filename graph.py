@@ -8,17 +8,17 @@ class DataAnalyzer:
     def __init__(self, folder_path):
         self.folder_path = folder_path
         self.data_files = {}
-        self.combined_data = {}
+        self.combined_data = {} 
 
     def load_files(self):
-
+        
         for file_name in os.listdir(self.folder_path):
             if file_name.endswith(".csv"):
                 file_path = os.path.join(self.folder_path, file_name)
                 self.data_files[file_name] = pd.read_csv(file_path, sep=";")
 
     def create_combined_trace(self, values=100):
-
+       
         traces = []
         for file_name, df in self.data_files.items():
             x_values = df["x"].tail(values)
@@ -31,26 +31,32 @@ class DataAnalyzer:
         return traces
 
     def create_streamlit_app(self):
-
+       
         combined_traces = self.create_combined_trace()
 
         st.title("Interactive Combined Graph Dashboard")
 
+        
         st.sidebar.header("Graph Customization")
 
+       
         x_scale = st.sidebar.radio("X-axis Scale", ["linear", "log"])
         y_scale = st.sidebar.radio("Y-axis Scale", ["linear", "log"])
 
+        
         x_title = st.sidebar.text_input("Custom X-axis Title", "X-axis")
         y_title = st.sidebar.text_input("Custom Y-axis Title", "Y-axis")
 
+     
         show_grid = st.sidebar.checkbox("Show Grid", value=True)
         show_legend = st.sidebar.checkbox("Show Legend", value=True)
 
+        
         st.sidebar.header("Select Plots to Display and Customize Names")
         selected_plots = {}
         custom_names = {}
 
+        
         for trace in combined_traces:
             with st.sidebar.expander(f"{trace.name} Options", expanded=True):
                 is_selected = st.checkbox(f"Show {trace.name}", value=True)
@@ -59,10 +65,11 @@ class DataAnalyzer:
                 selected_plots[trace.name] = is_selected
                 custom_names[trace.name] = custom_name
 
+   
         fig = go.Figure()
 
         for trace in combined_traces:
-            if selected_plots[trace.name]:
+            if selected_plots[trace.name]: 
                 line_name = (
                     custom_names[trace.name] if custom_names[trace.name] else trace.name
                 )
@@ -72,6 +79,7 @@ class DataAnalyzer:
                     )
                 )
 
+       
         fig.update_layout(
             title="Combined Convergence Graph",
             xaxis=dict(
@@ -87,10 +95,12 @@ class DataAnalyzer:
             showlegend=show_legend,
         )
 
+       
         st.plotly_chart(fig, use_container_width=True)
 
 
-folder_path = r"C:\Users\nagan\OneDrive\Desktop\Internship_project\scratches"  # Replace with your folder path containing CSV files
+
+folder_path = r"scratches"  
 analyzer = DataAnalyzer(folder_path)
 analyzer.load_files()
 analyzer.create_streamlit_app()
