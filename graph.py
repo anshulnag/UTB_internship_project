@@ -100,7 +100,7 @@ class DataAnalyzer:
 
 
 # Example usage
-folder_path = r"C:\Users\nagan\OneDrive\Desktop\Internship_project\scratches"  # Replace with your folder path containing CSV files
+folder_path = r"scratches"  # Replace with your folder path containing CSV files
 analyzer = DataAnalyzer(folder_path)
 analyzer.load_files()
 analyzer.create_streamlit_app()
