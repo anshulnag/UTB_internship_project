@@ -87,8 +87,7 @@ class DataAnalyzer:
 
         for trace in combined_traces:
             if selected_plots[trace.name]:
-
-        fig = go.Figure()
+                fig = go.Figure()
 
         for trace in combined_traces:
             if selected_plots[trace.name]: 
