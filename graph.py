@@ -12,12 +12,6 @@ class DataAnalyzer:
 
     def load_files(self):
 
-
-        self.combined_data = {} 
-
-    def load_files(self):
-        
-
         for file_name in os.listdir(self.folder_path):
             if file_name.endswith(".csv"):
                 file_path = os.path.join(self.folder_path, file_name)
@@ -53,26 +47,9 @@ class DataAnalyzer:
         show_grid = st.sidebar.checkbox("Show Grid", value=True)
         show_legend = st.sidebar.checkbox("Show Legend", value=True)
 
-        
-        st.sidebar.header("Graph Customization")
-
-       
-        x_scale = st.sidebar.radio("X-axis Scale", ["linear", "log"])
-        y_scale = st.sidebar.radio("Y-axis Scale", ["linear", "log"])
-
-        
-        x_title = st.sidebar.text_input("Custom X-axis Title", "X-axis")
-        y_title = st.sidebar.text_input("Custom Y-axis Title", "Y-axis")
-
-     
-        show_grid = st.sidebar.checkbox("Show Grid", value=True)
-        show_legend = st.sidebar.checkbox("Show Legend", value=True)
-
-
         st.sidebar.header("Select Plots to Display and Customize Names")
         selected_plots = {}
         custom_names = {}
-
 
         for trace in combined_traces:
             with st.sidebar.expander(f"{trace.name} Options", expanded=True):
@@ -82,16 +59,10 @@ class DataAnalyzer:
                 selected_plots[trace.name] = is_selected
                 custom_names[trace.name] = custom_name
 
-
         fig = go.Figure()
 
         for trace in combined_traces:
             if selected_plots[trace.name]:
-                fig = go.Figure()
-
-        for trace in combined_traces:
-            if selected_plots[trace.name]: 
-
                 line_name = (
                     custom_names[trace.name] if custom_names[trace.name] else trace.name
                 )
@@ -118,7 +89,8 @@ class DataAnalyzer:
 
         st.plotly_chart(fig, use_container_width=True)
 
-folder_path = r"scratches"  
+
+folder_path = r"C:\Users\nagan\OneDrive\Desktop\Internship_project\scratches"  # Replace with your folder path containing CSV files
 analyzer = DataAnalyzer(folder_path)
 analyzer.load_files()
 analyzer.create_streamlit_app()
