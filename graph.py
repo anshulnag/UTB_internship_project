@@ -12,10 +12,12 @@ class DataAnalyzer:
         self.statistics_data = {}
 
     def load_files(self):
-        for file_name in os.listdir(self.folder_path):
-            if file_name.endswith(".csv"):
-                file_path = os.path.join(self.folder_path, file_name)
-                self.data_files[file_name] = pd.read_csv(file_path, sep=";")
+        sorted_files = sorted(
+            [f for f in os.listdir(self.folder_path) if f.endswith(".csv")]
+        )
+        for file_name in sorted_files:
+            file_path = os.path.join(self.folder_path, file_name)
+            self.data_files[file_name] = pd.read_csv(file_path, sep=";")
 
     def calculate_statistics(self):
         combined_stats = {}
