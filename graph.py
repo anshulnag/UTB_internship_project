@@ -1,23 +1,57 @@
-import os
 import pandas as pd
 import plotly.graph_objs as go
 import streamlit as st
+import os
+import zipfile
+from io import BytesIO
 
 
 class DataAnalyzer:
-    def __init__(self, folder_path):
-        self.folder_path = folder_path
+    def __init__(self):
         self.data_files = {}
         self.combined_data = {}
         self.statistics_data = {}
 
-    def load_files(self):
-        sorted_files = sorted(
-            [f for f in os.listdir(self.folder_path) if f.endswith(".csv")]
-        )
-        for file_name in sorted_files:
-            file_path = os.path.join(self.folder_path, file_name)
-            self.data_files[file_name] = pd.read_csv(file_path, sep=";")
+    def add_uploaded_file(self, uploaded_file):
+        try:
+            df = pd.read_csv(uploaded_file, sep=";")
+            file_name = uploaded_file.name
+            self.data_files[file_name] = df
+
+            if "y" in df.columns:
+                y_column = df["y"]
+                stats = y_column.describe().to_dict()
+                self.statistics_data[file_name] = stats
+            else:
+                st.warning(f"Warning: Column 'y' not found in the uploaded file.")
+        except Exception as e:
+            st.error(f"Error processing uploaded file: {e}")
+
+    def add_uploaded_folder(self, uploaded_zip):
+        try:
+            # Extract the uploaded zip file
+            with zipfile.ZipFile(BytesIO(uploaded_zip.read()), "r") as zip_ref:
+                zip_ref.extractall("uploaded_folder")
+
+            # Process all CSV files in the extracted folder
+            extracted_files = [
+                f for f in os.listdir("uploaded_folder") if f.endswith(".csv")
+            ]
+            for file_name in extracted_files:
+                file_path = os.path.join("uploaded_folder", file_name)
+                df = pd.read_csv(file_path, sep=";")
+                self.data_files[file_name] = df
+
+                if "y" in df.columns:
+                    y_column = df["y"]
+                    stats = y_column.describe().to_dict()
+                    self.statistics_data[file_name] = stats
+                else:
+                    st.warning(
+                        f"Warning: Column 'y' not found in the file {file_name}."
+                    )
+        except Exception as e:
+            st.error(f"Error processing uploaded folder: {e}")
 
     def calculate_statistics(self):
         combined_stats = {}
@@ -43,8 +77,25 @@ class DataAnalyzer:
         return traces
 
     def create_streamlit_app(self):
-        combined_traces = self.create_combined_trace()
         st.title("Interactive Combined Graph Dashboard")
+        st.sidebar.header("File/Folder Upload")
+
+        # Option to upload individual files
+        uploaded_files = st.sidebar.file_uploader(
+            "Upload individual CSV files", type="csv", accept_multiple_files=True
+        )
+        if uploaded_files:
+            for uploaded_file in uploaded_files:
+                self.add_uploaded_file(uploaded_file)
+
+        # Option to upload a folder as a ZIP file
+        uploaded_zip = st.sidebar.file_uploader(
+            "Upload a folder as a ZIP file", type="zip"
+        )
+        if uploaded_zip:
+            self.add_uploaded_folder(uploaded_zip)
+
+        combined_traces = self.create_combined_trace()
         st.sidebar.header("Graph Customization")
         x_scale = st.sidebar.radio("X-axis Scale", ["linear", "log"])
         y_scale = st.sidebar.radio("Y-axis Scale", ["linear", "log"])
@@ -75,6 +126,7 @@ class DataAnalyzer:
                 selected_plots[trace.name] = is_selected
                 show_in_table[trace.name] = is_in_table
                 custom_names[trace.name] = custom_name
+
         fig = go.Figure()
         for trace in combined_traces:
             if selected_plots[trace.name]:
@@ -142,8 +194,6 @@ class DataAnalyzer:
                 )
 
 
-folder_path = r"scratches"
-analyzer = DataAnalyzer(folder_path)
-analyzer.load_files()
-analyzer.calculate_statistics()
+# Instantiate and run the app
+analyzer = DataAnalyzer()
 analyzer.create_streamlit_app()
