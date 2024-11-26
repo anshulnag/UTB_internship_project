@@ -1,9 +1,9 @@
-import pandas as pd
-import plotly.graph_objs as go
-import streamlit as st
 import os
 import zipfile
 from io import BytesIO
+import pandas as pd
+import plotly.graph_objs as go
+import streamlit as st
 
 
 class DataAnalyzer:
@@ -11,21 +11,27 @@ class DataAnalyzer:
         self.data_files = {}
         self.combined_data = {}
         self.statistics_data = {}
+        self.excluded_files = (
+            set()
+        )  # Keeps track of files excluded from last Y statistics
 
-    def add_uploaded_file(self, uploaded_file):
-        try:
-            df = pd.read_csv(uploaded_file, sep=";")
-            file_name = uploaded_file.name
-            self.data_files[file_name] = df
+    def add_uploaded_files(self, uploaded_files):
+        for uploaded_file in uploaded_files:
+            try:
+                df = pd.read_csv(uploaded_file, sep=";")
+                file_name = uploaded_file.name
+                self.data_files[file_name] = df
 
-            if "y" in df.columns:
-                y_column = df["y"]
-                stats = y_column.describe().to_dict()
-                self.statistics_data[file_name] = stats
-            else:
-                st.warning(f"Warning: Column 'y' not found in the uploaded file.")
-        except Exception as e:
-            st.error(f"Error processing uploaded file: {e}")
+                if "y" in df.columns:
+                    y_column = df["y"]
+                    stats = y_column.describe().to_dict()
+                    self.statistics_data[file_name] = stats
+                else:
+                    st.warning(
+                        f"Warning: Column 'y' not found in the file '{file_name}'."
+                    )
+            except Exception as e:
+                st.error(f"Error processing file '{uploaded_file.name}': {e}")
 
     def add_uploaded_folder(self, uploaded_zip):
         try:
@@ -64,6 +70,26 @@ class DataAnalyzer:
                 print(f"Warning: Column 'y' not found in file {file_name}. Skipping.")
         self.statistics_data = combined_stats
 
+    def calculate_last_y_statistics(self):
+        all_last_y_values = []
+        for file_name, df in self.data_files.items():
+            if file_name not in self.excluded_files:  # Only include files not excluded
+                if "y" in df.columns:
+                    last_y_value = df["y"].iloc[-1]
+                    all_last_y_values.append(last_y_value)
+
+        if all_last_y_values:
+            combined_last_y_series = pd.Series(all_last_y_values)
+            last_y_stats = combined_last_y_series.describe().to_dict()
+            return pd.DataFrame(
+                {
+                    "Statistic": last_y_stats.keys(),
+                    "Value": last_y_stats.values(),
+                }
+            )
+        else:
+            return pd.DataFrame(columns=["Statistic", "Value"])
+
     def create_combined_trace(self, values=100):
         traces = []
         for file_name, df in self.data_files.items():
@@ -78,19 +104,17 @@ class DataAnalyzer:
 
     def create_streamlit_app(self):
         st.title("Interactive Combined Graph Dashboard")
-        st.sidebar.header("File/Folder Upload")
+        st.sidebar.header("Upload Files")
 
-        # Option to upload individual files
         uploaded_files = st.sidebar.file_uploader(
-            "Upload individual CSV files", type="csv", accept_multiple_files=True
+            "Upload multiple CSV files", type="csv", accept_multiple_files=True
         )
         if uploaded_files:
-            for uploaded_file in uploaded_files:
-                self.add_uploaded_file(uploaded_file)
+            self.add_uploaded_files(uploaded_files)
 
-        # Option to upload a folder as a ZIP file
+        st.sidebar.header("Upload Folder")
         uploaded_zip = st.sidebar.file_uploader(
-            "Upload a folder as a ZIP file", type="zip"
+            "Upload a ZIP folder of CSV files", type="zip"
         )
         if uploaded_zip:
             self.add_uploaded_folder(uploaded_zip)
@@ -123,6 +147,17 @@ class DataAnalyzer:
                     value=True,
                     key=f"{trace.name}_table",
                 )
+                exclude_from_last_y = st.checkbox(
+                    f"Exclude {custom_name} from Last Y Statistics",
+                    value=False,
+                    key=f"{trace.name}_exclude",
+                )
+
+                if exclude_from_last_y:
+                    self.excluded_files.add(trace.name)
+                else:
+                    self.excluded_files.discard(trace.name)
+
                 selected_plots[trace.name] = is_selected
                 show_in_table[trace.name] = is_in_table
                 custom_names[trace.name] = custom_name
@@ -193,7 +228,15 @@ class DataAnalyzer:
                     "No statistics to display. Please enable some files to view statistics."
                 )
 
+        st.header("Combined Last Y Value Statistics")
+        last_y_stats = self.calculate_last_y_statistics()
+        if not last_y_stats.empty:
+            st.write("Statistics of the last Y values from all files combined:")
+            st.table(last_y_stats)
+        else:
+            st.write("No last Y value statistics available. Please upload valid files.")
 
-# Instantiate and run the app
+
+# Instantiate and Run the App
 analyzer = DataAnalyzer()
 analyzer.create_streamlit_app()
